@@ -1,43 +1,63 @@
 // ================================
-// FORCE RESUME DOWNLOAD (WORKS EVERYWHERE)
+// UNIVERSAL RESUME DOWNLOAD HANDLER
 // ================================
 document.addEventListener('DOMContentLoaded', () => {
-    const downloadBtn = document.getElementById('downloadResume');
+    // Select all buttons that link to the PDF or have the specific ID
+    const downloadButtons = document.querySelectorAll('a[href*="resume.pdf"], #downloadResume');
 
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', function (e) {
-            // If it's a local file, we want to try and force a download
-            // without preventDefault first to allow the 'download' attribute to work.
-            // If the browser still opens it, we use programmatic download.
-
-            const pdfPath = 'resume.pdf';
-            const fileName = 'YogeshWaraKannan_Resume.pdf';
-
-            // For hosted environments (http/https)
+    downloadButtons.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            // Prevent default navigation initially
             if (window.location.protocol !== 'file:') {
                 e.preventDefault();
-                fetch(pdfPath)
-                    .then(response => response.blob())
-                    .then(blob => {
-                        const url = window.URL.createObjectURL(blob);
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = fileName;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        window.URL.revokeObjectURL(url);
-                    })
-                    .catch(() => {
-                        window.location.href = pdfPath;
-                    });
+                
+                const originalText = btn.innerHTML;
+                const pdfPath = btn.getAttribute('href') || 'resume.pdf';
+                const fileName = 'YogeshWaraKannan_Resume.pdf';
+
+                try {
+                    // Show loading state (optional but good UX)
+                    btn.style.opacity = '0.7';
+                    btn.style.cursor = 'wait';
+
+                    const response = await fetch(pdfPath);
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = fileName;
+                    
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // Cleanup
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    setTimeout(() => {
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                    }, 500);
+
+                } catch (error) {
+                    console.error('Download failed:', error);
+                    // Fallback: Just open it in new tab
+                    window.open(pdfPath, '_blank');
+                    
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                }
             } else {
-                // For local file:// protocol
-                // We let the default action happen but ensure the attributes are correct
-                downloadBtn.setAttribute('download', fileName);
+                // Local file system: Just ensure target is blank so it doesn't kill the page
+                // The 'download' attribute handles the rest if browser supports it
+                btn.setAttribute('target', '_blank');
             }
         });
-    }
+    });
 });
 
 
